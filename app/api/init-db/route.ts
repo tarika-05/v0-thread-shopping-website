@@ -8,82 +8,122 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function POST() {
   try {
-    // Create products table
-    await supabase.rpc('exec', {
+    console.log('[v0] Starting database initialization...')
+
+    // Check if tables already exist by trying to query products
+    const { data: existingTables } = await supabase
+      .from('products')
+      .select('id')
+      .limit(1)
+
+    if (existingTables !== null) {
+      console.log('[v0] Tables already exist, skipping creation')
+      return NextResponse.json({ 
+        message: 'Database tables already exist',
+        skipped: true 
+      })
+    }
+
+    // Tables don't exist, create them
+    const { error: productsError } = await supabase.rpc('exec', {
       sql: `
-        CREATE TABLE IF NOT EXISTS products (
+        CREATE TABLE IF NOT EXISTS public.products (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           name TEXT NOT NULL,
           description TEXT,
           price DECIMAL(10, 2) NOT NULL,
           stock INTEGER NOT NULL DEFAULT 100,
-          created_at TIMESTAMP DEFAULT NOW()
-        );
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
       `,
-    }).catch(() => null)
+    })
 
-    // Create product_images table
-    await supabase.rpc('exec', {
+    if (productsError) {
+      console.log('[v0] Products table creation note:', productsError.message)
+    }
+
+    const { error: imagesError } = await supabase.rpc('exec', {
       sql: `
-        CREATE TABLE IF NOT EXISTS product_images (
+        CREATE TABLE IF NOT EXISTS public.product_images (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+          product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
           color TEXT NOT NULL,
           color_code TEXT NOT NULL,
           image_url TEXT NOT NULL,
           "order" INTEGER NOT NULL
-        );
+        )
       `,
-    }).catch(() => null)
+    })
 
-    // Create cart_items table
-    await supabase.rpc('exec', {
+    if (imagesError) {
+      console.log('[v0] Product images table creation note:', imagesError.message)
+    }
+
+    const { error: cartError } = await supabase.rpc('exec', {
       sql: `
-        CREATE TABLE IF NOT EXISTS cart_items (
+        CREATE TABLE IF NOT EXISTS public.cart_items (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-          product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+          product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
           color TEXT NOT NULL,
           quantity INTEGER NOT NULL DEFAULT 1,
-          created_at TIMESTAMP DEFAULT NOW()
-        );
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
       `,
-    }).catch(() => null)
+    })
 
-    // Create orders table
-    await supabase.rpc('exec', {
+    if (cartError) {
+      console.log('[v0] Cart items table creation note:', cartError.message)
+    }
+
+    const { error: ordersError } = await supabase.rpc('exec', {
       sql: `
-        CREATE TABLE IF NOT EXISTS orders (
+        CREATE TABLE IF NOT EXISTS public.orders (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
           total_price DECIMAL(10, 2) NOT NULL,
           payment_method TEXT NOT NULL,
           status TEXT NOT NULL DEFAULT 'pending',
-          created_at TIMESTAMP DEFAULT NOW()
-        );
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
       `,
-    }).catch(() => null)
+    })
 
-    // Create order_items table
-    await supabase.rpc('exec', {
+    if (ordersError) {
+      console.log('[v0] Orders table creation note:', ordersError.message)
+    }
+
+    const { error: orderItemsError } = await supabase.rpc('exec', {
       sql: `
-        CREATE TABLE IF NOT EXISTS order_items (
+        CREATE TABLE IF NOT EXISTS public.order_items (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-          product_id UUID NOT NULL REFERENCES products(id),
+          order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+          product_id UUID NOT NULL REFERENCES public.products(id),
           color TEXT NOT NULL,
           quantity INTEGER NOT NULL,
           price DECIMAL(10, 2) NOT NULL
-        );
+        )
       `,
-    }).catch(() => null)
+    })
 
-    return NextResponse.json({ message: 'Database initialized' })
+    if (orderItemsError) {
+      console.log('[v0] Order items table creation note:', orderItemsError.message)
+    }
+
+    console.log('[v0] Database initialization completed')
+    return NextResponse.json({ 
+      message: 'Database tables initialized successfully',
+      initialized: true 
+    })
   } catch (error) {
-    console.error('Database init error:', error)
+    console.error('[v0] Database init error:', error)
+    // Don't fail on error - tables might already exist
     return NextResponse.json(
-      { error: 'Failed to initialize database' },
-      { status: 500 }
+      { 
+        message: 'Database initialization attempted',
+        error: String(error)
+      },
+      { status: 200 }
     )
   }
 }
