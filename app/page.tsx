@@ -21,27 +21,8 @@ export default function HomePage() {
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
-    const initializeAndFetch = async () => {
+    const fetchProducts = async () => {
       try {
-        // Initialize database tables first
-        console.log('[v0] Initializing database tables...')
-        const initResponse = await fetch('/api/init-db', { method: 'POST' })
-        console.log('[v0] Init response:', initResponse.status)
-
-        // Wait a moment for tables to be created
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        // Try to seed products if needed
-        console.log('[v0] Seeding products...')
-        const seedResponse = await fetch('/api/seed-products', { method: 'POST' })
-        const seedData = await seedResponse.json()
-        console.log('[v0] Seed response:', seedData)
-        setIsInitialized(true)
-
-        // Wait a moment for products to be inserted
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        // Fetch products
         console.log('[v0] Fetching products from database...')
         const { data, error } = await supabase
           .from('products')
@@ -73,13 +54,13 @@ export default function HomePage() {
           setProducts(productsWithImages)
         }
       } catch (error) {
-        console.error('[v0] Initialization error:', error)
+        console.error('[v0] Fetch error:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    initializeAndFetch()
+    fetchProducts()
   }, [])
 
   return (
