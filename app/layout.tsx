@@ -4,14 +4,16 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { AuthProvider } from './auth-context'
 import { CartProvider } from './cart-context'
+import { WishlistProvider } from './wishlist-context'
 import { Navbar } from '@/components/navbar'
+import { Footer } from '@/components/footer'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'ThreadShop - Premium Quality Threads',
-  description: 'Shop the finest selection of threads in every color imaginable. Fast delivery and premium quality guaranteed.',
+  title: 'LUXE - Premium Fashion & Clothing',
+  description: 'Discover our curated collection of luxury fashion, premium clothing, and timeless pieces for modern life.',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -39,11 +41,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="bg-background">
-      <body className="font-sans antialiased bg-background text-foreground">
+      <body className="font-sans antialiased bg-background text-foreground flex flex-col min-h-screen">
         <AuthProvider>
           <CartProvider>
-            <Navbar />
-            {children}
+            <WishlistProvider>
+              <Navbar />
+              <div className="flex-1">
+                {children}
+              </div>
+              <Footer />
+            </WishlistProvider>
           </CartProvider>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
