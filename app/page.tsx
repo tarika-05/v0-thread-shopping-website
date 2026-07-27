@@ -3,10 +3,10 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { HeroBanner } from '@/components/hero-banner'
-import { CategoryNav } from '@/components/category-nav'
-import { ProductCard } from '@/components/product-card'
-import { Button } from '@/components/ui/button'
+import { ThreadsHero } from '@/components/threads-hero'
+import { FeaturedCollections } from '@/components/featured-collections'
+import { ProductsGrid } from '@/components/products-grid'
+import { ThreadsProductCard } from '@/components/threads-product-card'
 
 interface Product {
   id: string
@@ -110,139 +110,146 @@ function HomePageContent() {
     setFilteredProducts(filtered)
   }, [products, selectedCategory, searchQuery, sortBy])
 
+  // Split products into sections
+  const newArrivals = filteredProducts.slice(0, 4)
+  const trendingProducts = filteredProducts.slice(4, 8)
+  const bestSellers = filteredProducts.slice(8, 12)
+  const saleProducts = filteredProducts.filter((p) => p.discount_percent > 0).slice(0, 4)
+
+  // Check if we're on home or filtered view
+  const isFilteredView = selectedCategory || searchQuery
+
   return (
-    <main className="min-h-screen bg-background">
-      {/* Hero Banner */}
-      <HeroBanner />
+    <main className="min-h-screen bg-white">
+      {/* Hero Section - Only show on home */}
+      {!isFilteredView && <ThreadsHero />}
 
-      {/* Category Navigation */}
-      <CategoryNav />
+      {/* Featured Collections - Only show on home */}
+      {!isFilteredView && <FeaturedCollections />}
 
-      {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-        {/* Header with Sort Options */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-foreground mb-2">
-              {selectedCategory
-                ? selectedCategory
-                    .split('-')
-                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ')
-                : searchQuery
-                  ? `Search Results for "${searchQuery}"`
-                  : 'Discover Our Collection'}
-            </h2>
-            <p className="text-muted-foreground">
-              {loading
-                ? 'Loading products...'
-                : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} found`}
-            </p>
-          </div>
+      {/* New Arrivals Section */}
+      {!isFilteredView && (
+        <ProductsGrid
+          title="New Arrivals"
+          description="Discover the latest additions to our collection"
+          products={newArrivals}
+          loading={loading}
+        />
+      )}
 
-          {/* Sort Options */}
-          <div className="mt-4 sm:mt-0">
-            <select
-              defaultValue={sortBy}
-              onChange={(e) => {
-                const params = new URLSearchParams(searchParams.toString())
-                params.set('sort', e.target.value)
-                window.history.replaceState(null, '', `?${params.toString()}`)
-              }}
-              className="px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="featured">Featured</option>
-              <option value="new">Newest</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
-            </select>
-          </div>
-        </div>
+      {/* Filtered Products - Show when filtering */}
+      {isFilteredView && (
+        <section className="py-16 sm:py-24 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Header */}
+            <div className="mb-12 sm:mb-16">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-2">
+                {selectedCategory
+                  ? selectedCategory
+                      .split('-')
+                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(' ')
+                  : `Search Results for "${searchQuery}"`}
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                {loading
+                  ? 'Loading products...'
+                  : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} found`}
+              </p>
+            </div>
 
-        {/* Products Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-card rounded-lg overflow-hidden animate-pulse">
-                <div className="bg-secondary aspect-square mb-4"></div>
-                <div className="p-4 space-y-3">
-                  <div className="bg-muted rounded h-4 w-3/4"></div>
-                  <div className="bg-muted rounded h-6 w-1/2"></div>
+            {/* Products Grid */}
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="bg-secondary rounded-lg overflow-hidden animate-pulse">
+                    <div className="bg-muted aspect-square mb-4" />
+                    <div className="p-4 space-y-3">
+                      <div className="bg-muted rounded h-4 w-3/4" />
+                      <div className="bg-muted rounded h-6 w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="mb-4">
+                  <div className="text-6xl mb-4">∅</div>
+                  <h3 className="text-2xl font-semibold text-foreground mb-2">No products found</h3>
+                  <p className="text-muted-foreground">
+                    {searchQuery ? 'Try adjusting your search terms' : 'Check back soon for new arrivals'}
+                  </p>
                 </div>
               </div>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {filteredProducts.map((product) => (
+                  <ThreadsProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
           </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="mb-4">
-              <div className="text-6xl mb-4">✨</div>
-              <h3 className="text-2xl font-semibold text-foreground mb-2">
-                No products found
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                {searchQuery
-                  ? 'Try adjusting your search terms'
-                  : 'Check back soon for new arrivals'}
-              </p>
-              <Button className="bg-accent hover:bg-accent/90 text-white">
-                Continue Shopping
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                price={product.price}
-                image={product.images?.[0]?.image_url || '/fashion/mens-shirt-navy.png'}
-                rating={product.rating || 4.5}
-                reviewCount={product.review_count || 0}
-                discount={product.discount_percent || 0}
-                category={product.category}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      {/* Trust Section */}
-      <section className="bg-secondary/50 mt-16 py-12 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-foreground text-center mb-12">
-            Why Shop With LUXE
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-3xl mb-3">🚚</div>
+      {/* Trending Section - Only show on home when not filtered */}
+      {!isFilteredView && (
+        <ProductsGrid
+          title="Trending Now"
+          description="Shop the most popular items this week"
+          products={trendingProducts}
+          loading={loading}
+        />
+      )}
+
+      {/* Best Sellers Section - Only show on home */}
+      {!isFilteredView && (
+        <ProductsGrid
+          title="Best Sellers"
+          description="Customer favorites and top-rated picks"
+          products={bestSellers}
+          loading={loading}
+        />
+      )}
+
+      {/* Sale Section - Only show on home when we have sale products */}
+      {!isFilteredView && saleProducts.length > 0 && (
+        <section className="py-16 sm:py-24 bg-black text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12 sm:mb-16">
+              <p className="text-accent font-medium text-sm uppercase tracking-widest mb-3">Sale</p>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
+                Exclusive Offers
+              </h2>
+              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                Limited time deals on selected items. Shop now before they&apos;re gone.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {saleProducts.map((product) => (
+                <ThreadsProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Support Section */}
+      <section className="py-12 sm:py-16 bg-secondary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+            <div>
               <h3 className="font-semibold text-foreground mb-2">Free Shipping</h3>
-              <p className="text-sm text-muted-foreground">
-                Free shipping on orders over $100
-              </p>
+              <p className="text-sm text-muted-foreground">On orders over $100 worldwide</p>
             </div>
-            <div className="text-center">
-              <div className="text-3xl mb-3">✓</div>
-              <h3 className="font-semibold text-foreground mb-2">Premium Quality</h3>
-              <p className="text-sm text-muted-foreground">
-                Curated selection of luxury items
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl mb-3">↩️</div>
+            <div>
               <h3 className="font-semibold text-foreground mb-2">Easy Returns</h3>
-              <p className="text-sm text-muted-foreground">
-                30-day return policy, no questions asked
-              </p>
+              <p className="text-sm text-muted-foreground">30-day return policy, no questions asked</p>
             </div>
-            <div className="text-center">
-              <div className="text-3xl mb-3">🔒</div>
-              <h3 className="font-semibold text-foreground mb-2">Secure Checkout</h3>
-              <p className="text-sm text-muted-foreground">
-                SSL encrypted & trusted payment methods
-              </p>
+            <div>
+              <h3 className="font-semibold text-foreground mb-2">Secure Shopping</h3>
+              <p className="text-sm text-muted-foreground">SSL encrypted & trusted payment methods</p>
             </div>
           </div>
         </div>

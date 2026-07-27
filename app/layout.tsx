@@ -12,8 +12,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'LUXE - Premium Fashion & Clothing',
-  description: 'Discover our curated collection of luxury fashion, premium clothing, and timeless pieces for modern life.',
+  title: 'THREADS - Modern Fashion for Everyone',
+  description: 'Discover contemporary fashion designed for the modern lifestyle. Premium quality, sustainable materials, and timeless style.',
   generator: 'v0.app',
   icons: {
     icon: [

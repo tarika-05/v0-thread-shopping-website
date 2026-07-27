@@ -5,30 +5,30 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #0f0f0f;
-  --card: #fafafa;
-  --card-foreground: #0f0f0f;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
   --popover: #ffffff;
-  --popover-foreground: #0f0f0f;
-  --primary: #0f0f0f;
+  --popover-foreground: #000000;
+  --primary: #000000;
   --primary-foreground: #ffffff;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #0f0f0f;
-  --muted: #e0e0e0;
-  --muted-foreground: #666666;
-  --accent: #d4af37;
-  --accent-foreground: #0f0f0f;
+  --secondary: #f8f8f8;
+  --secondary-foreground: #000000;
+  --muted: #e5e5e5;
+  --muted-foreground: #737373;
+  --accent: #dc2626;
+  --accent-foreground: #ffffff;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e0e0e0;
-  --input: #f9f9f9;
-  --ring: #0f0f0f;
-  --chart-1: #d4af37;
-  --chart-2: #1a1a1a;
-  --chart-3: #808080;
-  --chart-4: #0f0f0f;
-  --chart-5: #b8b8b8;
-  --radius: 0.375rem;
+  --border: #e5e5e5;
+  --input: #fafafa;
+  --ring: #000000;
+  --chart-1: #dc2626;
+  --chart-2: #000000;
+  --chart-3: #666666;
+  --chart-4: #999999;
+  --chart-5: #cccccc;
+  --radius: 0.25rem;
 }
 
 .dark {
@@ -39,23 +39,23 @@
   --popover: #1a1a1a;
   --popover-foreground: #ffffff;
   --primary: #ffffff;
-  --primary-foreground: #0a0a0a;
-  --secondary: #2a2a2a;
+  --primary-foreground: #000000;
+  --secondary: #262626;
   --secondary-foreground: #ffffff;
-  --muted: #3a3a3a;
-  --muted-foreground: #b0b0b0;
-  --accent: #d4af37;
-  --accent-foreground: #0a0a0a;
+  --muted: #404040;
+  --muted-foreground: #a3a3a3;
+  --accent: #ef4444;
+  --accent-foreground: #ffffff;
   --destructive: #ef4444;
-  --destructive-foreground: #0a0a0a;
-  --border: #2a2a2a;
-  --input: #151515;
+  --destructive-foreground: #000000;
+  --border: #262626;
+  --input: #1a1a1a;
   --ring: #ffffff;
-  --chart-1: #d4af37;
+  --chart-1: #ef4444;
   --chart-2: #ffffff;
   --chart-3: #808080;
-  --chart-4: #ffffff;
-  --chart-5: #b8b8b8;
+  --chart-4: #666666;
+  --chart-5: #999999;
 }
 
 @theme inline {
