@@ -86,11 +86,16 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-md">
+              <span className="text-lg font-bold text-primary-foreground">T</span>
+            </div>
+          </div>
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            Join ThreadShop
+            Join ThreadHub
           </h1>
           <p className="text-muted-foreground">
-            Create your account to start shopping
+            B2B Textile Marketplace - Create your account
           </p>
         </div>
 

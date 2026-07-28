@@ -37,11 +37,16 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-md">
+              <span className="text-lg font-bold text-primary-foreground">T</span>
+            </div>
+          </div>
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            Welcome Back
+            Welcome to ThreadHub
           </h1>
           <p className="text-muted-foreground">
-            Sign in to your ThreadShop account
+            B2B Textile Marketplace
           </p>
         </div>
 
@@ -136,7 +141,7 @@ export default function LoginPage() {
               Demo credentials (for testing):
             </p>
             <div className="space-y-2 text-sm font-mono">
-              <p className="text-foreground">Email: <span className="text-accent">demo@threadshop.com</span></p>
+              <p className="text-foreground">Email: <span className="text-accent">demo@threadhub.com</span></p>
               <p className="text-foreground">Password: <span className="text-accent">demo123456</span></p>
             </div>
           </CardContent>

@@ -47,7 +47,7 @@ export default function CartPage() {
               </p>
               <Link href="/">
                 <Button className="bg-accent hover:bg-accent/90 text-white">
-                  Shop Threads
+                  Continue Shopping
                 </Button>
               </Link>
             </CardContent>
@@ -165,9 +165,9 @@ export default function CartPage() {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tax</span>
+                      <span className="text-muted-foreground">GST (18%)</span>
                       <span className="font-semibold">
-                        ${(total * 0.1).toFixed(2)}
+                        ${(total * 0.18).toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -181,7 +181,7 @@ export default function CartPage() {
                       {(
                         total +
                         (total > 50 ? 0 : 5) +
-                        total * 0.1
+                        total * 0.18
                       ).toFixed(2)}
                     </span>
                   </div>
@@ -213,7 +213,7 @@ export default function CartPage() {
               <Card className="mt-4 bg-secondary/50">
                 <CardContent className="p-6">
                   <p className="text-sm text-muted-foreground mb-3">
-                    💡 Free shipping on orders over $50
+                    All prices include 18% GST. Free shipping on orders over $50.
                   </p>
                   <div className="flex gap-2">
                     <input

@@ -1,220 +1,173 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { ChevronRight } from 'lucide-react'
+import { ArrowRight, Zap, Shield, Truck } from 'lucide-react'
 
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  images: Array<{ color: string; color_code: string; image_url: string }>
-}
+const categoryHighlights = [
+  {
+    name: 'Acrylic Yarns',
+    slug: 'acrylic',
+    image: '/yarns/acrylic-cone-1.png',
+    description: 'Durable & versatile',
+  },
+  {
+    name: 'Cotton Yarns',
+    slug: 'cotton',
+    image: '/yarns/cotton-cone-1.png',
+    description: 'Natural & premium',
+  },
+  {
+    name: 'Wool Yarns',
+    slug: 'wool',
+    image: '/yarns/wool-cone-1.png',
+    description: 'Luxury fibers',
+  },
+  {
+    name: 'Blended Yarns',
+    slug: 'blended',
+    image: '/yarns/blended-cone-1.png',
+    description: 'Optimal properties',
+  },
+]
 
 export default function HomePage() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isInitialized, setIsInitialized] = useState(false)
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        console.log('[v0] Fetching products from database...')
-        const { data, error } = await supabase
-          .from('products')
-          .select(`
-            id,
-            name,
-            description,
-            price,
-            product_images (
-              color,
-              color_code,
-              image_url,
-              order
-            )
-          `)
-          .order('created_at', { ascending: false })
-
-        if (error) {
-          console.error('[v0] Products fetch error:', error)
-          setProducts([])
-        } else {
-          console.log('[v0] Fetched products:', data?.length || 0)
-          const productsWithImages = data?.map((product: any) => ({
-            ...product,
-            images: product.product_images?.sort(
-              (a: any, b: any) => a.order - b.order
-            ),
-          })) || []
-          setProducts(productsWithImages)
-        }
-      } catch (error) {
-        console.error('[v0] Fetch error:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchProducts()
-  }, [])
-
   return (
-    <main className="min-h-screen bg-background">
+    <main className="bg-white">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-accent/10 to-transparent py-12 px-4 sm:py-16 sm:px-6">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="font-serif text-4xl sm:text-5xl font-bold text-foreground mb-4">
-            Premium Threads
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mb-6">
-            Discover our curated collection of high-quality threads in every color imaginable. Perfect for sewing, embroidery, and crafting projects.
-          </p>
-          <Button className="bg-accent hover:bg-accent/90 text-white">
-            Explore Now
-            <ChevronRight className="ml-2 w-4 h-4" />
-          </Button>
+      <section className="bg-gradient-to-r from-primary via-primary to-blue-900 text-white py-20 sm:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl">
+            <p className="text-cyan-400 font-semibold text-sm uppercase tracking-widest mb-4">
+              B2B Textile Marketplace
+            </p>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              Premium Yarns & Textiles
+            </h1>
+            <p className="text-lg text-blue-100 mb-8 leading-relaxed">
+              Connect with verified suppliers. Access competitive bulk pricing, technical specifications,
+              and reliable fulfillment for your textile sourcing needs.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Link href="/browse">
+                <Button className="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold px-8 py-3">
+                  Browse Products <ArrowRight size={18} className="ml-2" />
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                className="border-white text-white hover:bg-white/10 font-semibold px-8 py-3"
+              >
+                Become a Supplier
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Products Grid */}
-      <section className="max-w-7xl mx-auto px-4 py-12 sm:px-6">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">
-            Our Collections
-          </h2>
-          <p className="text-muted-foreground">
-            {loading
-              ? 'Loading products...'
-              : `Browse our ${products.length} thread collections`}
-          </p>
-        </div>
+      {/* Category Highlights */}
+      <section className="py-16 sm:py-24 bg-secondary/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">Featured Categories</h2>
+            <p className="text-muted-foreground text-lg">Browse our most popular yarn selections</p>
+          </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="bg-muted rounded-lg h-64 mb-4"></div>
-                  <div className="bg-muted rounded h-6 w-3/4 mb-2"></div>
-                  <div className="bg-muted rounded h-4 w-1/2"></div>
-                </CardContent>
-              </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {categoryHighlights.map((cat) => (
+              <Link key={cat.slug} href={`/browse?category=${cat.slug}`}>
+                <div className="bg-card border border-border rounded-lg overflow-hidden hover:border-accent hover:shadow-lg transition-all group cursor-pointer">
+                  {/* Image */}
+                  <div className="aspect-square bg-secondary overflow-hidden">
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-foreground group-hover:text-accent transition-colors mb-1">
+                      {cat.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">{cat.description}</p>
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-lg">
-              No products available yet. Please try again later.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product) => {
-              const firstImage = product.images?.[0]
-              return (
-                <Link key={product.id} href={`/product/${product.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                    <CardContent className="p-6">
-                      {/* Product Image */}
-                      <div className="bg-muted rounded-lg h-64 mb-4 flex items-center justify-center overflow-hidden">
-                        {firstImage?.image_url ? (
-                          <img
-                            src={firstImage.image_url}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="text-muted-foreground">
-                            No image
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Product Info */}
-                      <h3 className="font-bold text-lg text-foreground mb-2 line-clamp-2">
-                        {product.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {product.description}
-                      </p>
-
-                      {/* Color Swatches */}
-                      <div className="flex gap-2 mb-4 flex-wrap">
-                        {product.images?.slice(0, 4).map((img, idx) => (
-                          <div
-                            key={idx}
-                            className="w-6 h-6 rounded-full border-2 border-border"
-                            style={{ backgroundColor: img.color_code }}
-                            title={img.color}
-                          ></div>
-                        ))}
-                        {product.images && product.images.length > 4 && (
-                          <div className="w-6 h-6 rounded-full border-2 border-border bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                            +{product.images.length - 4}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Price */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold text-foreground">
-                          ${product.price.toFixed(2)}
-                        </span>
-                        <Button
-                          size="sm"
-                          className="bg-accent hover:bg-accent/90 text-white"
-                        >
-                          View
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
-        )}
+        </div>
       </section>
 
       {/* Features Section */}
-      <section className="bg-secondary/50 py-12 px-4 sm:px-6 mt-12">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-foreground mb-8">
-            Why Choose ThreadShop?
-          </h2>
+      <section className="py-16 sm:py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <div className="text-4xl font-bold text-accent mb-2">100%</div>
-              <h3 className="font-bold text-lg text-foreground mb-2">
-                Premium Quality
-              </h3>
-              <p className="text-muted-foreground">
-                All our threads are sourced from trusted manufacturers worldwide.
-              </p>
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-accent/10">
+                  <Zap className="text-accent" size={24} />
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">Competitive Pricing</h3>
+                <p className="text-muted-foreground text-sm">
+                  Tiered bulk pricing with discounts for larger orders. Transparent pricing with no hidden fees.
+                </p>
+              </div>
             </div>
-            <div>
-              <div className="text-4xl font-bold text-accent mb-2">24/7</div>
-              <h3 className="font-bold text-lg text-foreground mb-2">
-                Support Available
-              </h3>
-              <p className="text-muted-foreground">
-                Our team is ready to help you find the perfect thread for your project.
-              </p>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-accent/10">
+                  <Shield className="text-accent" size={24} />
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">Verified Suppliers</h3>
+                <p className="text-muted-foreground text-sm">
+                  All suppliers are verified for quality and reliability. Secure B2B transactions with full traceability.
+                </p>
+              </div>
             </div>
-            <div>
-              <div className="text-4xl font-bold text-accent mb-2">Fast</div>
-              <h3 className="font-bold text-lg text-foreground mb-2">
-                Quick Shipping
-              </h3>
-              <p className="text-muted-foreground">
-                Get your threads delivered quickly and safely to your doorstep.
-              </p>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-accent/10">
+                  <Truck className="text-accent" size={24} />
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">Global Logistics</h3>
+                <p className="text-muted-foreground text-sm">
+                  Fast shipping worldwide. Real-time tracking and reliable delivery to your facility.
+                </p>
+              </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="bg-primary text-white py-16 sm:py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-6">Ready to Source Yarns?</h2>
+          <p className="text-lg text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join thousands of textile manufacturers and retailers sourcing through ThreadHub.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link href="/browse">
+              <Button className="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold px-8 py-3">
+                Start Shopping
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              className="border-white text-white hover:bg-white/10 font-semibold px-8 py-3"
+            >
+              Request Quote
+            </Button>
           </div>
         </div>
       </section>

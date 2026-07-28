@@ -22,6 +22,14 @@ interface Product {
   price: number
   stock: number
   product_images: ProductImage[]
+  sku?: string
+  moq?: number
+  material?: string
+  weight?: number
+  thickness?: number
+  tensile_strength?: string
+  cone_size?: string
+  bulk_pricing?: Array<{ quantity: number; unit_price: number; discount: number }>
 }
 
 export default function ProductPage() {
@@ -44,6 +52,14 @@ export default function ProductPage() {
             description,
             price,
             stock,
+            sku,
+            moq,
+            material,
+            weight,
+            thickness,
+            tensile_strength,
+            cone_size,
+            bulk_pricing,
             product_images (
               color,
               color_code,
@@ -291,21 +307,87 @@ export default function ProductPage() {
               Add to Cart
             </Button>
 
-            {/* Product Features */}
-            <Card className="bg-secondary/50">
-              <CardContent className="p-6">
-                <h3 className="font-bold text-foreground mb-4">
-                  Why You&apos;ll Love This Thread
-                </h3>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>✓ Premium quality material</li>
-                  <li>✓ Available in multiple colors</li>
-                  <li>✓ Perfect for hand and machine sewing</li>
-                  <li>✓ Fast and reliable shipping</li>
-                  <li>✓ 30-day money-back guarantee</li>
-                </ul>
-              </CardContent>
-            </Card>
+            {/* Product Specifications */}
+            {(product.sku || product.material || product.weight || product.thickness) && (
+              <Card className="bg-secondary/50">
+                <CardContent className="p-6">
+                  <h3 className="font-bold text-foreground mb-4">
+                    Product Specifications
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    {product.sku && (
+                      <div>
+                        <p className="text-muted-foreground">SKU</p>
+                        <p className="font-semibold text-foreground">{product.sku}</p>
+                      </div>
+                    )}
+                    {product.material && (
+                      <div>
+                        <p className="text-muted-foreground">Material</p>
+                        <p className="font-semibold text-foreground">{product.material}</p>
+                      </div>
+                    )}
+                    {product.weight && (
+                      <div>
+                        <p className="text-muted-foreground">Weight</p>
+                        <p className="font-semibold text-foreground">{product.weight}g</p>
+                      </div>
+                    )}
+                    {product.thickness && (
+                      <div>
+                        <p className="text-muted-foreground">Thickness</p>
+                        <p className="font-semibold text-foreground">{product.thickness}mm</p>
+                      </div>
+                    )}
+                    {product.moq && (
+                      <div>
+                        <p className="text-muted-foreground">MOQ</p>
+                        <p className="font-semibold text-foreground">{product.moq} units</p>
+                      </div>
+                    )}
+                    {product.cone_size && (
+                      <div>
+                        <p className="text-muted-foreground">Cone Size</p>
+                        <p className="font-semibold text-foreground">{product.cone_size}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Bulk Pricing Table */}
+            {product.bulk_pricing && product.bulk_pricing.length > 0 && (
+              <Card className="border-2 border-accent">
+                <CardContent className="p-6">
+                  <h3 className="font-bold text-foreground mb-4">
+                    Bulk Pricing Tiers
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-2 text-muted-foreground">Quantity</th>
+                          <th className="text-left py-2 text-muted-foreground">Unit Price</th>
+                          <th className="text-left py-2 text-muted-foreground">Discount</th>
+                          <th className="text-left py-2 text-muted-foreground">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {product.bulk_pricing.map((tier: any, idx: number) => (
+                          <tr key={idx} className="border-b border-border">
+                            <td className="py-2 font-semibold text-foreground">{tier.quantity}+</td>
+                            <td className="py-2 text-foreground">${tier.unit_price.toFixed(2)}</td>
+                            <td className="py-2 text-green-600 font-semibold">{tier.discount}%</td>
+                            <td className="py-2 font-bold text-accent">${(tier.unit_price * tier.quantity).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
