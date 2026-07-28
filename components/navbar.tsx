@@ -9,13 +9,13 @@ import { Button } from '@/components/ui/button'
 import { ShoppingCart, LogOut, User, Search, Menu, X, Heart } from 'lucide-react'
 
 const categories = [
-  { name: "Men's", slug: 'mens' },
-  { name: "Women's", slug: 'womens' },
-  { name: 'Oversized', slug: 'oversized' },
-  { name: 'Hoodies', slug: 'hoodies' },
-  { name: 'Sweatshirts', slug: 'sweatshirts' },
-  { name: 'Jeans', slug: 'jeans' },
-  { name: 'Accessories', slug: 'accessories' },
+  { name: 'Acrylic', slug: 'acrylic' },
+  { name: 'Cotton', slug: 'cotton' },
+  { name: 'Wool', slug: 'wool' },
+  { name: 'Blended', slug: 'blended' },
+  { name: 'Silk', slug: 'silk' },
+  { name: 'Technical', slug: 'technical' },
+  { name: 'All Yarns', slug: 'all' },
 ]
 
 export function Navbar() {
@@ -49,10 +49,14 @@ export function Navbar() {
         {/* Main Header */}
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center flex-shrink-0">
-            <span className="text-2xl font-bold text-foreground tracking-tight">
-              THREADS
-            </span>
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-md">
+              <span className="text-lg font-bold text-primary-foreground">T</span>
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-lg font-bold text-foreground">ThreadHub</span>
+              <span className="text-xs text-muted-foreground">B2B Textiles</span>
+            </div>
           </Link>
 
           {/* Desktop Categories */}
