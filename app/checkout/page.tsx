@@ -38,7 +38,7 @@ export default function CheckoutPage() {
   }, [items.length, orderPlaced, router])
 
   const shippingCost = shippingType === 'express' ? 15 : total > 50 ? 0 : 5
-  const tax = total * 0.1
+  const tax = total * 0.18
   const finalTotal = total + shippingCost + tax
 
   const handlePlaceOrder = async () => {
@@ -399,7 +399,7 @@ export default function CheckoutPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax (10%)</span>
+                    <span className="text-muted-foreground">GST (18%)</span>
                     <span className="font-semibold">${tax.toFixed(2)}</span>
                   </div>
                 </div>
