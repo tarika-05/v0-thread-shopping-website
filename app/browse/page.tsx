@@ -1,133 +1,57 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
+import useSWR from 'swr'
 import { useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import { ProductCard } from '@/components/product-card'
-
-type Product = {
-  id: string
-  name: string
-  description: string | null
-  price: number
-  category: string | null
-  rating: number | null
-  review_count: number | null
-  discount_percent: number | null
-  product_images: { image_url: string; order: number }[] | null
-}
+import { ProductFiltersState, ThreadHubFilters } from '@/components/threadhub-filters'
+import { fetchThreadHubProducts } from '@/lib/threadhub'
+import { SlidersHorizontal } from 'lucide-react'
 
 function BrowseProducts() {
   const searchParams = useSearchParams()
-  const category = searchParams.get('category')
+  const initialCategory = searchParams.get('category')
   const search = searchParams.get('search')?.trim().toLowerCase() ?? ''
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    let active = true
-
-    async function loadProducts() {
-      setLoading(true)
-      setFailed(false)
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, description, price, category, rating, review_count, discount_percent, product_images(image_url, order)')
-        .order('created_at', { ascending: false })
-
-      if (!active) return
-      if (error) {
-        console.error('Failed to load browse products:', error)
-        setFailed(true)
-        setProducts([])
-      } else {
-        setProducts((data ?? []) as Product[])
-      }
-      setLoading(false)
-    }
-
-    loadProducts()
-    return () => {
-      active = false
-    }
-  }, [])
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesCategory = !category || product.category?.toLowerCase() === category.toLowerCase()
-      const matchesSearch = !search || `${product.name} ${product.description ?? ''} ${product.category ?? ''}`.toLowerCase().includes(search)
-      return matchesCategory && matchesSearch
-    })
-  }, [products, category, search])
-
-  const title = category
-    ? `${category.charAt(0).toUpperCase()}${category.slice(1)} yarns`
-    : search
-      ? `Search results for “${searchParams.get('search')}”`
-      : 'Browse all yarns'
+  const [filters, setFilters] = useState<ProductFiltersState>({
+    categories: initialCategory && initialCategory !== 'all' ? [initialCategory] : [],
+    materials: [],
+    maxPrice: 5000,
+  })
+  const [showFilters, setShowFilters] = useState(false)
+  const { data: products = [], error, isLoading } = useSWR('threadhub-products', fetchThreadHubProducts)
+  const priceCap = Math.max(5000, ...products.map((product) => product.price))
+  const materials = [...new Set(products.map((product) => product.material_type || product.material).filter(Boolean) as string[])].sort()
+  const filteredProducts = useMemo(() => products.filter((product) => {
+    const searchable = `${product.name} ${product.description ?? ''} ${product.category ?? ''} ${product.sku ?? ''} ${product.material_type ?? ''} ${product.material ?? ''}`.toLowerCase()
+    return (!filters.categories.length || filters.categories.includes(product.category ?? '')) &&
+      (!filters.materials.length || filters.materials.includes(product.material_type || product.material || '')) &&
+      product.price <= filters.maxPrice &&
+      (!search || searchable.includes(search))
+  }), [products, filters, search])
+  const title = search ? `Results for “${searchParams.get('search')}”` : initialCategory && initialCategory !== 'all' ? `${initialCategory.charAt(0).toUpperCase()}${initialCategory.slice(1)} yarns` : 'Yarns & threads'
 
   return (
     <main className="min-h-[60vh] bg-background">
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8 border-b border-border pb-6">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent">ThreadHub marketplace</p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {loading ? 'Loading products…' : `${filteredProducts.length} product${filteredProducts.length === 1 ? '' : 's'}`}
-          </p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">ThreadHub · B2B textile marketplace</p>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1><p className="mt-2 text-sm text-muted-foreground">Source dependable fibers with clear specs, stock, and wholesale tiers.</p></div>
+            <p className="text-sm text-muted-foreground" aria-live="polite">{isLoading ? 'Loading catalog…' : `${filteredProducts.length} of ${products.length} products`}</p>
+          </div>
         </div>
-
-        {loading ? (
-          <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4" aria-label="Loading products">
-            {Array.from({ length: 8 }, (_, index) => (
-              <div key={index} className="animate-pulse">
-                <div className="aspect-square bg-secondary" />
-                <div className="mt-3 h-4 w-3/4 bg-secondary" />
-                <div className="mt-2 h-4 w-1/3 bg-secondary" />
-              </div>
-            ))}
+        <button type="button" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)} className="mb-4 inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium lg:hidden"><SlidersHorizontal aria-hidden="true" className="h-4 w-4" /> Filters</button>
+        <div className="grid gap-7 lg:grid-cols-[230px_minmax(0,1fr)]">
+          <div className={`${showFilters ? 'block' : 'hidden'} lg:block`}><ThreadHubFilters materials={materials} priceCap={priceCap} value={filters} onChange={setFilters} onReset={() => setFilters({ categories: [], materials: [], maxPrice: priceCap })} /></div>
+          <div>
+            {isLoading ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <div key={index} className="animate-pulse"><div className="aspect-square bg-secondary" /><div className="mt-3 h-4 w-3/4 bg-secondary" /><div className="mt-2 h-4 w-1/2 bg-secondary" /></div>)}</div> : error ? <div role="alert" className="rounded-lg border border-border p-10 text-center"><h2 className="font-semibold">Catalog unavailable</h2><p className="mt-2 text-sm text-muted-foreground">We couldn&apos;t reach the product catalog. Please try again shortly.</p></div> : filteredProducts.length ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{filteredProducts.map((product) => <ProductCard key={product.id} product={product} />)}</div> : <div className="rounded-lg border border-dashed border-border p-12 text-center"><h2 className="font-semibold">No products match these filters</h2><p className="mt-2 text-sm text-muted-foreground">Adjust your filters or clear them to see more yarns.</p><button type="button" onClick={() => setFilters({ categories: [], materials: [], maxPrice: priceCap })} className="mt-4 text-sm font-medium text-accent hover:underline">Clear filters</button></div>}
           </div>
-        ) : failed ? (
-          <div className="py-16 text-center">
-            <h2 className="text-xl font-semibold">Products are temporarily unavailable</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Please try again in a moment.</p>
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="py-16 text-center">
-            <h2 className="text-xl font-semibold">No yarns found</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Try another category or search term.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 lg:grid-cols-4">
-            {filteredProducts.map((product) => {
-              const image = [...(product.product_images ?? [])]
-                .sort((a, b) => a.order - b.order)[0]?.image_url ?? '/yarns/acrylic-cone-1.png'
-              return (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  price={Number(product.price)}
-                  image={image}
-                  rating={Number(product.rating ?? 0)}
-                  reviewCount={Number(product.review_count ?? 0)}
-                  discount={Number(product.discount_percent ?? 0)}
-                  category={product.category ?? undefined}
-                />
-              )
-            })}
-          </div>
-        )}
+        </div>
       </section>
     </main>
   )
 }
 
 export default function BrowsePage() {
-  return (
-    <Suspense fallback={<main className="min-h-[60vh] animate-pulse bg-background" />}>
-      <BrowseProducts />
-    </Suspense>
-  )
+  return <Suspense fallback={<main className="min-h-[60vh] animate-pulse bg-background" />}><BrowseProducts /></Suspense>
 }
