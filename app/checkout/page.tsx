@@ -1,434 +1,155 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useCart } from '@/app/cart-context'
 import { useAuth } from '@/app/auth-context'
-import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Check, Truck, CreditCard, Smartphone, DollarSign } from 'lucide-react'
-import Link from 'next/link'
 
-type PaymentMethod = 'cod' | 'upi' | 'card' | null
+type PaymentMethod = 'cod' | 'upi'
 type ShippingType = 'standard' | 'express'
+type Address = { firstName: string; lastName: string; email: string; phone: string; street: string; city: string; postalCode: string }
+
+const formatINR = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(amount)
+const inputClass = 'w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'
+const FREE_SHIPPING_THRESHOLD = 50000
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, total, clearCart } = useCart()
-  const { session } = useAuth()
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null)
+  const { items, total, clearCart, loading: cartLoading } = useCart()
+  const { session, loading: authLoading } = useAuth()
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [shippingType, setShippingType] = useState<ShippingType>('standard')
-  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
   const [orderPlaced, setOrderPlaced] = useState(false)
-  const [orderId, setOrderId] = useState<string | null>(null)
+  const [orderId, setOrderId] = useState('')
+  const [placedTotal, setPlacedTotal] = useState(0)
+  const [idempotencyKey, setIdempotencyKey] = useState('')
 
-  // Redirect if no session
   useEffect(() => {
-    if (!session) {
-      router.push('/login')
-    }
-  }, [session, router])
+    setIdempotencyKey(crypto.randomUUID())
+  }, [])
 
-  // Redirect if cart is empty
   useEffect(() => {
-    if (items.length === 0 && !orderPlaced) {
-      router.push('/cart')
-    }
-  }, [items.length, orderPlaced, router])
+    if (!authLoading && !session) router.replace('/login')
+  }, [authLoading, session, router])
 
-  const shippingCost = shippingType === 'express' ? 15 : total > 50 ? 0 : 5
-  const tax = total * 0.18
+  useEffect(() => {
+    if (!cartLoading && items.length === 0 && !orderPlaced) router.replace('/cart')
+  }, [cartLoading, items.length, orderPlaced, router])
+
+  const shippingCost = shippingType === 'express' ? 1500 : total >= FREE_SHIPPING_THRESHOLD ? 0 : 500
+  const tax = Math.round(total * 0.18 * 100) / 100
   const finalTotal = total + shippingCost + tax
 
-  const handlePlaceOrder = async () => {
-    if (!paymentMethod || !session) return
+  async function handlePlaceOrder(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!session || !idempotencyKey || !items.length) return
+    setBusy(true)
+    setError('')
+    const form = new FormData(event.currentTarget)
+    const address: Address = {
+      firstName: String(form.get('firstName') ?? '').trim(),
+      lastName: String(form.get('lastName') ?? '').trim(),
+      email: String(form.get('email') ?? '').trim(),
+      phone: String(form.get('phone') ?? '').trim(),
+      street: String(form.get('street') ?? '').trim(),
+      city: String(form.get('city') ?? '').trim(),
+      postalCode: String(form.get('postalCode') ?? '').trim(),
+    }
 
-    setLoading(true)
     try {
-      // Create order in database
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: session.user.id,
-          total_price: finalTotal,
-          payment_method: paymentMethod.toUpperCase(),
-          status: 'pending',
-        })
-        .select('id')
-        .single()
-
-      if (orderError) throw orderError
-
-      const newOrderId = orderData.id
-
-      // Create order items
-      const orderItems = items.map((item) => ({
-        order_id: newOrderId,
-        product_id: item.productId,
-        color: item.color,
-        quantity: item.quantity,
-        price: item.price,
-      }))
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems)
-
-      if (itemsError) throw itemsError
-
-      // Clear cart and show success
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          items: items.map(({ productId, color, quantity }) => ({ productId, color, quantity })),
+          address,
+          shippingType,
+          paymentMethod,
+          idempotencyKey,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not place your order.')
       clearCart()
-      setOrderId(newOrderId)
+      setOrderId(result.orderId)
+      setPlacedTotal(Number(result.total))
       setOrderPlaced(true)
-    } catch (error) {
-      console.error('[v0] Order placement error:', error)
-      alert('Failed to place order. Please try again.')
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Could not place your order. Please try again.')
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
-  if (orderPlaced && orderId) {
+  if (orderPlaced) {
     return (
-      <main className="min-h-screen bg-background px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <Card className="border-2 border-green-500">
-            <CardContent className="p-12 text-center space-y-6">
-              <div className="flex justify-center">
-                <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-                  <Check className="w-10 h-10 text-green-600" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground mb-2">
-                  Order Placed Successfully!
-                </h1>
-                <p className="text-muted-foreground">
-                  Thank you for your purchase.
-                </p>
-              </div>
-
-              <Card className="bg-secondary/50">
-                <CardContent className="p-6">
-                  <div className="text-left space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Order Number
-                      </p>
-                      <p className="font-bold text-foreground">{orderId}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Total Amount
-                      </p>
-                      <p className="text-2xl font-bold text-accent">
-                        ${finalTotal.toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <p className="font-bold text-foreground">
-                        Processing Your Order
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  A confirmation email has been sent to {session?.user?.email}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  You can track your order from your account.
-                </p>
-              </div>
-
-              <div className="flex gap-4 justify-center pt-4">
-                <Link href="/account">
-                  <Button className="bg-accent hover:bg-accent/90 text-white">
-                    View Orders
-                  </Button>
-                </Link>
-                <Link href="/">
-                  <Button variant="outline">Continue Shopping</Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+      <main className="min-h-screen bg-muted/30 px-4 py-12">
+        <div className="mx-auto max-w-2xl">
+          <Card><CardContent className="space-y-6 p-8 text-center sm:p-12">
+            <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><Check className="size-8" aria-hidden="true" /></div>
+            <div><h1 className="text-3xl font-semibold tracking-tight">Order confirmed</h1><p className="mt-2 text-muted-foreground">Thank you. Your order has been received.</p></div>
+            <div className="rounded-lg border bg-muted/40 p-5 text-left"><p className="text-sm text-muted-foreground">Order number</p><p className="mt-1 break-all font-mono text-sm">{orderId}</p><div className="mt-4 flex items-center justify-between"><span className="text-muted-foreground">Total</span><span className="text-xl font-semibold">{formatINR(placedTotal)}</span></div><p className="mt-3 text-sm text-muted-foreground">Payment: {paymentMethod === 'cod' ? 'Cash on delivery' : 'UPI (payment pending)'}</p></div>
+            {paymentMethod === 'upi' && <p className="text-sm text-muted-foreground">Your order is recorded as pending. The seller will share UPI payment instructions before fulfillment.</p>}
+            <div className="flex flex-col justify-center gap-3 sm:flex-row"><Link href="/account"><Button>View account</Button></Link><Link href="/"><Button variant="outline">Continue shopping</Button></Link></div>
+          </CardContent></Card>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-background px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Back Button */}
-        <Link href="/cart">
-          <Button variant="outline" className="mb-6">
-            <ArrowLeft className="mr-2 w-4 h-4" />
-            Back to Cart
-          </Button>
-        </Link>
+    <main className="min-h-screen bg-muted/30 px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-6xl">
+        <Link href="/cart" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" aria-hidden="true" /> Back to cart</Link>
+        <div className="mb-8"><p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">ThreadHub checkout</p><h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Delivery & payment</h1></div>
 
-        <h1 className="text-4xl font-bold text-foreground mb-8">
-          Checkout
-        </h1>
+        <form onSubmit={handlePlaceOrder} className="grid items-start gap-8 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-6">
+            <Card><CardContent className="p-6">
+              <h2 className="text-lg font-semibold">Shipping address</h2>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1.5 text-sm font-medium">First name<input className={inputClass} name="firstName" autoComplete="given-name" required maxLength={100} /></label>
+                <label className="space-y-1.5 text-sm font-medium">Last name<input className={inputClass} name="lastName" autoComplete="family-name" required maxLength={100} /></label>
+                <label className="space-y-1.5 text-sm font-medium sm:col-span-2">Email<input className={inputClass} name="email" type="email" autoComplete="email" defaultValue={session?.user.email ?? ''} required maxLength={200} /></label>
+                <label className="space-y-1.5 text-sm font-medium sm:col-span-2">Phone number<input className={inputClass} name="phone" type="tel" autoComplete="tel" required maxLength={30} /></label>
+                <label className="space-y-1.5 text-sm font-medium sm:col-span-2">Street address<input className={inputClass} name="street" autoComplete="street-address" required maxLength={200} /></label>
+                <label className="space-y-1.5 text-sm font-medium">City<input className={inputClass} name="city" autoComplete="address-level2" required maxLength={100} /></label>
+                <label className="space-y-1.5 text-sm font-medium">Postal code<input className={inputClass} name="postalCode" autoComplete="postal-code" required maxLength={20} /></label>
+              </div>
+            </CardContent></Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Checkout Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Shipping Address */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-foreground mb-4">
-                  Shipping Address
-                </h2>
-                <form className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="First Name"
-                      className="col-span-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Last Name"
-                      className="col-span-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground"
-                    />
-                  </div>
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    defaultValue={session?.user?.email || ''}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground"
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Street Address"
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="City"
-                      className="col-span-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Postal Code"
-                      className="col-span-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground"
-                    />
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-6">
+              <h2 className="flex items-center gap-2 text-lg font-semibold"><Truck className="size-5" aria-hidden="true" /> Shipping method</h2>
+              <div className="mt-4 space-y-3">
+                {([{ id: 'standard', name: 'Standard shipping', time: '5–7 business days', cost: total >= FREE_SHIPPING_THRESHOLD ? 0 : 500 }, { id: 'express', name: 'Express shipping', time: '2–3 business days', cost: 1500 }] as const).map((method) => <label key={method.id} className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 ${shippingType === method.id ? 'border-primary bg-primary/5' : 'border-border'}`}><input type="radio" name="shipping" value={method.id} checked={shippingType === method.id} onChange={() => setShippingType(method.id)} /><span className="flex-1"><span className="block font-medium">{method.name}</span><span className="text-sm text-muted-foreground">{method.time}</span></span><span className="font-medium">{method.cost ? formatINR(method.cost) : 'Free'}</span></label>)}
+              </div>
+            </CardContent></Card>
 
-            {/* Shipping Method */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-                  <Truck className="w-6 h-6" />
-                  Shipping Method
-                </h2>
-                <div className="space-y-3">
-                  {[
-                    {
-                      id: 'standard',
-                      name: 'Standard Shipping',
-                      time: '5-7 business days',
-                      cost: total > 50 ? 0 : 5,
-                    },
-                    {
-                      id: 'express',
-                      name: 'Express Shipping',
-                      time: '2-3 business days',
-                      cost: 15,
-                    },
-                  ].map((method) => (
-                    <label
-                      key={method.id}
-                      className="flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all"
-                      style={{
-                        borderColor:
-                          shippingType === method.id ? '#c87137' : '#e8e3db',
-                        backgroundColor:
-                          shippingType === method.id
-                            ? 'rgba(200, 113, 55, 0.05)'
-                            : 'transparent',
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="shipping"
-                        value={method.id}
-                        checked={shippingType === method.id as any}
-                        onChange={(e) =>
-                          setShippingType(e.target.value as ShippingType)
-                        }
-                        className="w-4 h-4"
-                      />
-                      <div className="flex-1">
-                        <p className="font-bold text-foreground">
-                          {method.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {method.time}
-                        </p>
-                      </div>
-                      <p className="font-bold text-foreground">
-                        {method.cost === 0 ? 'FREE' : `$${method.cost}`}
-                      </p>
-                    </label>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Payment Method */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-                  <CreditCard className="w-6 h-6" />
-                  Payment Method
-                </h2>
-                <div className="space-y-3">
-                  {[
-                    {
-                      id: 'cod',
-                      name: 'Cash on Delivery (COD)',
-                      desc: 'Pay when your order arrives',
-                      icon: DollarSign,
-                    },
-                    {
-                      id: 'upi',
-                      name: 'UPI Payment',
-                      desc: 'Google Pay, PhonePe, Paytm, etc.',
-                      icon: Smartphone,
-                    },
-                    {
-                      id: 'card',
-                      name: 'Credit/Debit Card',
-                      desc: 'Visa, Mastercard, American Express',
-                      icon: CreditCard,
-                    },
-                  ].map((method) => {
-                    const Icon = method.icon
-                    return (
-                      <label
-                        key={method.id}
-                        className="flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all"
-                        style={{
-                          borderColor:
-                            paymentMethod === method.id
-                              ? '#c87137'
-                              : '#e8e3db',
-                          backgroundColor:
-                            paymentMethod === method.id
-                              ? 'rgba(200, 113, 55, 0.05)'
-                              : 'transparent',
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="payment"
-                          value={method.id}
-                          checked={paymentMethod === method.id as any}
-                          onChange={(e) =>
-                            setPaymentMethod(e.target.value as PaymentMethod)
-                          }
-                          className="w-4 h-4"
-                        />
-                        <Icon className="w-6 h-6 text-accent flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="font-bold text-foreground">
-                            {method.name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {method.desc}
-                          </p>
-                        </div>
-                      </label>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-6">
+              <h2 className="flex items-center gap-2 text-lg font-semibold"><CreditCard className="size-5" aria-hidden="true" /> Payment method</h2>
+              <div className="mt-4 space-y-3">
+                <label className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border'}`}><input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} /><DollarSign className="size-5 text-primary" aria-hidden="true" /><span><span className="block font-medium">Cash on delivery</span><span className="text-sm text-muted-foreground">Pay when your order arrives</span></span></label>
+                <label className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 ${paymentMethod === 'upi' ? 'border-primary bg-primary/5' : 'border-border'}`}><input type="radio" name="payment" value="upi" checked={paymentMethod === 'upi'} onChange={() => setPaymentMethod('upi')} /><Smartphone className="size-5 text-primary" aria-hidden="true" /><span><span className="block font-medium">UPI transfer</span><span className="text-sm text-muted-foreground">Payment instructions are shared after order confirmation</span></span></label>
+              </div>
+            </CardContent></Card>
           </div>
 
-          {/* Order Summary */}
-          <div className="h-fit sticky top-24">
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <h2 className="text-2xl font-bold text-foreground">
-                  Order Summary
-                </h2>
-
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {items.map((item) => (
-                    <div
-                      key={`${item.productId}-${item.color}`}
-                      className="flex justify-between text-sm"
-                    >
-                      <span className="text-muted-foreground">
-                        {item.productName} ({item.color}) x {item.quantity}
-                      </span>
-                      <span className="font-semibold">
-                        ${(item.price * item.quantity).toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="space-y-2 border-t border-b border-border py-4">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-semibold">${total.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span className="font-semibold">
-                      {shippingCost === 0 ? 'FREE' : `$${shippingCost}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">GST (18%)</span>
-                    <span className="font-semibold">${tax.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-lg font-bold text-foreground">
-                    Total
-                  </span>
-                  <span className="text-3xl font-bold text-accent">
-                    ${finalTotal.toFixed(2)}
-                  </span>
-                </div>
-
-                <Button
-                  onClick={handlePlaceOrder}
-                  disabled={!paymentMethod || loading}
-                  className="w-full bg-accent hover:bg-accent/90 text-white text-lg py-6 disabled:opacity-50"
-                >
-                  {loading ? 'Processing...' : 'Place Order'}
-                </Button>
-
-                <div className="text-xs text-muted-foreground text-center pt-2 space-y-1">
-                  <p>✓ Secure payment processing</p>
-                  <p>✓ 30-day money-back guarantee</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+          <aside className="lg:sticky lg:top-6"><Card><CardContent className="space-y-5 p-6">
+            <h2 className="text-lg font-semibold">Order summary</h2>
+            <div className="max-h-64 space-y-3 overflow-y-auto">{items.map((item) => <div key={`${item.productId}-${item.color}`} className="flex justify-between gap-3 text-sm"><span className="min-w-0 text-muted-foreground">{item.productName} · {item.color} × {item.quantity}</span><span className="shrink-0 font-medium">{formatINR(item.price * item.quantity)}</span></div>)}</div>
+            <div className="space-y-2 border-y py-4 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatINR(total)}</span></div><div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span>{shippingCost ? formatINR(shippingCost) : 'Free'}</span></div><div className="flex justify-between"><span className="text-muted-foreground">GST (18%)</span><span>{formatINR(tax)}</span></div></div>
+            <div className="flex items-center justify-between"><span className="font-semibold">Total</span><span className="text-xl font-semibold">{formatINR(finalTotal)}</span></div>
+            {error && <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+            <Button type="submit" disabled={busy || !idempotencyKey || cartLoading} className="w-full">{busy ? 'Placing order…' : 'Place order'}</Button>
+            <p className="text-center text-xs text-muted-foreground">Prices and stock are verified when you place your order.</p>
+          </CardContent></Card></aside>
+        </form>
       </div>
     </main>
   )
