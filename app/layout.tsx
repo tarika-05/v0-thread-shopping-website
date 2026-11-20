@@ -12,8 +12,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'THREADS - Modern Fashion for Everyone',
-  description: 'Discover contemporary fashion designed for the modern lifestyle. Premium quality, sustainable materials, and timeless style.',
+  title: 'ThreadHub — B2B Yarn & Textile Marketplace',
+  description: 'Source yarns and threads with clear minimum order quantities, live stock, bulk pricing, and technical specifications.',
   generator: 'v0.app',
   icons: {
     icon: [
