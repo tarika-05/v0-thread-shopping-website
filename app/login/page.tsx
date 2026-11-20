@@ -10,10 +10,13 @@ import { Mail, Lock, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn } = useAuth()
+  const { signIn, resendConfirmation } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [emailUnconfirmed, setEmailUnconfirmed] = useState(false)
+  const [resendMessage, setResendMessage] = useState('')
+  const [resending, setResending] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,10 +28,40 @@ export default function LoginPage() {
       await signIn(email, password)
       router.push('/')
     } catch (err: any) {
-      console.error('[v0] Login error:', err)
-      setError(err.message || 'Failed to sign in. Please check your credentials.')
+      const errorCode = typeof err?.code === 'string' ? err.code : ''
+      const errorMessage = typeof err?.message === 'string' ? err.message.toLowerCase() : ''
+      const requiresConfirmation = errorCode === 'email_not_confirmed' || errorMessage.includes('email not confirmed')
+
+      setEmailUnconfirmed(requiresConfirmation)
+      setError(
+        requiresConfirmation
+          ? 'Confirm your email before signing in. You can request a new confirmation link below.'
+          : errorCode === 'invalid_credentials'
+            ? 'Invalid email or password.'
+            : 'We could not sign you in right now. Please try again.'
+      )
+      setResendMessage('')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResendConfirmation = async () => {
+    setResending(true)
+    setResendMessage('')
+
+    try {
+      await resendConfirmation(email.trim())
+      setResendMessage('A new confirmation link has been sent. Check your inbox and spam folder.')
+    } catch (err: any) {
+      const errorCode = typeof err?.code === 'string' ? err.code : ''
+      setResendMessage(
+        errorCode === 'over_email_send_rate_limit'
+          ? 'Please wait a little before requesting another link.'
+          : 'We could not send a confirmation email. Please try again later.'
+      )
+    } finally {
+      setResending(false)
     }
   }
 
@@ -54,7 +87,7 @@ export default function LoginPage() {
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Error Alert */}
-              {error && (
+              {error && !emailUnconfirmed && (
                 <div className="p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-red-600">{error}</p>
@@ -72,7 +105,11 @@ export default function LoginPage() {
                     type="email"
                     id="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      setEmailUnconfirmed(false)
+                      setResendMessage('')
+                    }}
                     placeholder="you@example.com"
                     required
                     className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
@@ -98,6 +135,22 @@ export default function LoginPage() {
                   />
                 </div>
               </div>
+
+              {emailUnconfirmed && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                  <p>{error}</p>
+                  <Button
+                    type="button"
+                    variant="link"
+                    disabled={resending || !email.trim()}
+                    onClick={handleResendConfirmation}
+                    className="mt-2 h-auto p-0 font-semibold text-accent"
+                  >
+                    {resending ? 'Sending link...' : 'Resend confirmation email'}
+                  </Button>
+                  {resendMessage && <p role="status" className="mt-2">{resendMessage}</p>}
+                </div>
+              )}
 
               {/* Forgot Password Link */}
               <div className="text-right">

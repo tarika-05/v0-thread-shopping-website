@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/app/auth-context'
 import { Button } from '@/components/ui/button'
@@ -9,7 +8,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Mail, Lock, User, AlertCircle, Check } from 'lucide-react'
 
 export default function SignupPage() {
-  const router = useRouter()
   const { signUp } = useAuth()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -44,12 +42,15 @@ export default function SignupPage() {
     try {
       await signUp(email, password, fullName)
       setSuccess(true)
-      setTimeout(() => {
-        router.push('/login')
-      }, 2000)
     } catch (err: any) {
-      console.error('[v0] Signup error:', err)
-      setError(err.message || 'Failed to create account. Please try again.')
+      const errorCode = typeof err?.code === 'string' ? err.code : ''
+      setError(
+        errorCode === 'weak_password'
+          ? 'Choose a stronger password and try again.'
+          : errorCode === 'over_email_send_rate_limit'
+            ? 'Too many confirmation emails were requested. Please wait before trying again.'
+            : 'We could not create your account. Please check your details and try again.'
+      )
     } finally {
       setLoading(false)
     }
@@ -68,11 +69,14 @@ export default function SignupPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-foreground">
-                  Account Created!
+                  Check your email
                 </h2>
                 <p className="text-muted-foreground mt-2">
-                  Redirecting to login page...
+                  We sent a confirmation link to <span className="font-medium text-foreground">{email}</span>. Confirm your email before signing in. If you don&apos;t see it, check your spam folder.
                 </p>
+                <Link href="/login" className="mt-4 inline-flex font-semibold text-accent hover:text-accent/80">
+                  Continue to sign in
+                </Link>
               </div>
             </CardContent>
           </Card>

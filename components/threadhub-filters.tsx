@@ -1,180 +1,68 @@
 'use client'
 
-import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { yarnCategories } from '@/lib/threadhub'
 
-interface FilterProps {
-  onCategoryChange?: (category: string) => void
-  onPriceChange?: (min: number, max: number) => void
-  onMaterialChange?: (material: string) => void
-  onMoqChange?: (moq: number) => void
+export interface ProductFiltersState {
+  categories: string[]
+  materials: string[]
+  maxPrice: number
 }
 
-const yarnCategories = [
-  { label: 'Acrylic', value: 'acrylic' },
-  { label: 'Blended', value: 'blended' },
-  { label: 'Cotton', value: 'cotton' },
-  { label: 'Embroidery', value: 'embroidery' },
-  { label: 'Linen', value: 'linen' },
-  { label: 'Nylon', value: 'nylon' },
-  { label: 'Polyester', value: 'polyester' },
-  { label: 'Silk', value: 'silk' },
-  { label: 'Spandex', value: 'spandex' },
-  { label: 'Technical', value: 'technical' },
-  { label: 'Wool', value: 'wool' },
-]
-
-const priceRanges = [
-  { label: 'Under $50', min: 0, max: 50 },
-  { label: '$50 - $100', min: 50, max: 100 },
-  { label: '$100 - $500', min: 100, max: 500 },
-  { label: '$500 - $1000', min: 500, max: 1000 },
-  { label: 'Over $1000', min: 1000, max: 999999 },
-]
-
-const materials = ['100% Cotton', '100% Wool', 'Cotton Blend', 'Synthetic', 'Mixed Fiber']
-const moqOptions = [
-  { label: 'Any MOQ', value: 0 },
-  { label: 'MOQ ≤ 50', value: 50 },
-  { label: 'MOQ ≤ 100', value: 100 },
-  { label: 'MOQ ≤ 500', value: 500 },
-]
-
 export function ThreadHubFilters({
-  onCategoryChange,
-  onPriceChange,
-  onMaterialChange,
-  onMoqChange,
-}: FilterProps) {
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    category: true,
-    price: true,
-    material: true,
-    moq: false,
-  })
-
-  const toggleSection = (section: string) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }))
+  materials,
+  priceCap,
+  value,
+  onChange,
+  onReset,
+}: {
+  materials: string[]
+  priceCap: number
+  value: ProductFiltersState
+  onChange: (next: ProductFiltersState) => void
+  onReset: () => void
+}) {
+  const toggle = (key: 'categories' | 'materials', item: string) => {
+    const current = value[key]
+    onChange({
+      ...value,
+      [key]: current.includes(item) ? current.filter((entry) => entry !== item) : [...current, item],
+    })
   }
 
   return (
-    <div className="w-full space-y-4">
-      {/* Category Filter */}
-      <div className="border-b border-border pb-4">
-        <button
-          onClick={() => toggleSection('category')}
-          className="flex items-center justify-between w-full py-2 hover:text-accent transition-colors"
-        >
-          <h3 className="font-semibold text-foreground">Yarn Category</h3>
-          <ChevronDown
-            size={18}
-            className={`transition-transform ${expandedSections.category ? 'rotate-180' : ''}`}
-          />
-        </button>
-        {expandedSections.category && (
-          <div className="space-y-2 mt-3">
-            {yarnCategories.map((cat) => (
-              <label key={cat.value} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  onChange={(e) => onCategoryChange?.(e.target.checked ? cat.value : '')}
-                  className="w-4 h-4 rounded border-border"
-                />
-                <span className="text-sm text-foreground">{cat.label}</span>
-              </label>
-            ))}
-          </div>
-        )}
+    <aside aria-label="Product filters" className="space-y-7 rounded-lg border border-border bg-card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">Filters</h2>
+        <button type="button" onClick={onReset} className="text-xs font-medium text-accent hover:underline">Clear all</button>
       </div>
-
-      {/* Price Filter */}
-      <div className="border-b border-border pb-4">
-        <button
-          onClick={() => toggleSection('price')}
-          className="flex items-center justify-between w-full py-2 hover:text-accent transition-colors"
-        >
-          <h3 className="font-semibold text-foreground">Price Range</h3>
-          <ChevronDown
-            size={18}
-            className={`transition-transform ${expandedSections.price ? 'rotate-180' : ''}`}
-          />
-        </button>
-        {expandedSections.price && (
-          <div className="space-y-2 mt-3">
-            {priceRanges.map((range) => (
-              <label key={range.label} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="price"
-                  onChange={() => onPriceChange?.(range.min, range.max)}
-                  className="w-4 h-4 rounded-full border-border"
-                />
-                <span className="text-sm text-foreground">{range.label}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Material Filter */}
-      <div className="border-b border-border pb-4">
-        <button
-          onClick={() => toggleSection('material')}
-          className="flex items-center justify-between w-full py-2 hover:text-accent transition-colors"
-        >
-          <h3 className="font-semibold text-foreground">Material</h3>
-          <ChevronDown
-            size={18}
-            className={`transition-transform ${expandedSections.material ? 'rotate-180' : ''}`}
-          />
-        </button>
-        {expandedSections.material && (
-          <div className="space-y-2 mt-3">
-            {materials.map((mat) => (
-              <label key={mat} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  onChange={(e) => onMaterialChange?.(e.target.checked ? mat : '')}
-                  className="w-4 h-4 rounded border-border"
-                />
-                <span className="text-sm text-foreground">{mat}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* MOQ Filter */}
-      <div className="pb-4">
-        <button
-          onClick={() => toggleSection('moq')}
-          className="flex items-center justify-between w-full py-2 hover:text-accent transition-colors"
-        >
-          <h3 className="font-semibold text-foreground">Minimum Order Qty</h3>
-          <ChevronDown
-            size={18}
-            className={`transition-transform ${expandedSections.moq ? 'rotate-180' : ''}`}
-          />
-        </button>
-        {expandedSections.moq && (
-          <div className="space-y-2 mt-3">
-            {moqOptions.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="moq"
-                  onChange={() => onMoqChange?.(opt.value)}
-                  className="w-4 h-4 rounded-full border-border"
-                />
-                <span className="text-sm text-foreground">{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      <fieldset>
+        <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Categories</legend>
+        <div className="max-h-64 space-y-2 overflow-y-auto">
+          {yarnCategories.map((category) => (
+            <label key={category.value} className="flex cursor-pointer items-center gap-2.5 text-sm">
+              <input type="checkbox" checked={value.categories.includes(category.value)} onChange={() => toggle('categories', category.value)} className="h-4 w-4 rounded border-border accent-slate-900" />
+              <span>{category.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className="border-t border-border pt-6">
+        <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Maximum price</legend>
+        <label htmlFor="price-range" className="mb-2 block text-sm font-medium">Up to ₹{value.maxPrice.toLocaleString('en-IN')}</label>
+        <input id="price-range" type="range" min={0} max={priceCap} step={100} value={value.maxPrice} onChange={(event) => onChange({ ...value, maxPrice: Number(event.target.value) })} className="w-full accent-slate-900" />
+        <div className="flex justify-between text-[11px] text-muted-foreground"><span>₹0</span><span>₹{priceCap.toLocaleString('en-IN')}</span></div>
+      </fieldset>
+      <fieldset className="border-t border-border pt-6">
+        <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Material type</legend>
+        <div className="max-h-56 space-y-2 overflow-y-auto">
+          {materials.map((material) => (
+            <label key={material} className="flex cursor-pointer items-center gap-2.5 text-sm">
+              <input type="checkbox" checked={value.materials.includes(material)} onChange={() => toggle('materials', material)} className="h-4 w-4 rounded border-border accent-slate-900" />
+              <span>{material}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    </aside>
   )
 }

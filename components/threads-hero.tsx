@@ -11,7 +11,7 @@ export function ThreadsHero() {
           backgroundImage: "url('/fashion/hero-banner.png')",
           backgroundSize: 'cover',
           backgroundPosition: 'center right',
-          backgroundBlend: 'overlay',
+          backgroundBlendMode: 'overlay',
         }}
       />
 
