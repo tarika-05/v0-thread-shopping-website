@@ -38,7 +38,7 @@ export function ThreadHubProductCard({
   const isInStock = stock > 0
 
   return (
-    <Link href={`/products/${id}`}>
+    <Link href={`/product/${id}`}>
       <div className="bg-card border border-border rounded-lg overflow-hidden hover:border-accent transition-all hover:shadow-lg group cursor-pointer">
         {/* Image Container */}
         <div className="relative aspect-square bg-secondary overflow-hidden">
